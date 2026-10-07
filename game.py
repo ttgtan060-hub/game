@@ -405,6 +405,7 @@ class PawnshopGame(ctk.CTk):
         "status": self.cur_real_status,
         "damages": list(self.cur_dmg_list),
         "actual_repair_cost": actual_repair_cost,
+        "spent_on_repair": 0,
         "is_repaired": len(self.cur_dmg_list) == 0,
     }
 
@@ -450,21 +451,31 @@ class PawnshopGame(ctk.CTk):
       card = ctk.CTkFrame(self.scroll_sell, corner_radius=10)
       card.pack(fill="x", padx=10, pady=5)
 
+      total_cost = item["buy_price"] + item["spent_on_repair"]
+
+      if item["spent_on_repair"] > 0:
+        cost_info = (
+            f"Купівля: {item['buy_price']} грн | Ремонт:"
+            f" {item['spent_on_repair']} грн | 💰 Всього витрачено:"
+            f" {total_cost} грн"
+        )
+      else:
+        cost_info = f"💰 Всього витрачено: {total_cost} грн (купівля)"
+
       status_str = (
-          "✨ Відремонтовано (Ідеальний)"
+          "✨ Відремонтовано"
           if item["is_repaired"]
           else f"⚠️ Стан: {item['status']}"
       )
-      info_txt = (
-          f"📱 {item['dev']} | Куплено за: {item['buy_price']} грн |"
-          f" {status_str}"
-      )
+
+      info_txt = f"📱 {item['dev']} | {status_str}\n📊 {cost_info}"
 
       lbl = ctk.CTkLabel(
           card,
           text=info_txt,
-          font=ctk.CTkFont(size=14, weight="bold"),
+          font=ctk.CTkFont(size=13, weight="bold"),
           anchor="w",
+          justify="left",
       )
       lbl.pack(side="left", padx=15, pady=10)
 
@@ -512,14 +523,20 @@ class PawnshopGame(ctk.CTk):
       )
       return
 
-    profit = sell_price - item["buy_price"]
+    total_cost = item["buy_price"] + item["spent_on_repair"]
+    profit = sell_price - total_cost
     self.balance += sell_price
     self.inventory.pop(idx)
 
+    profit_str = (
+        f"Чистий прибуток: +{profit} грн."
+        if profit >= 0
+        else f"Збиток: {profit} грн."
+    )
+
     messagebox.showinfo(
         "Успішний продаж!",
-        f"Ви продали {item['dev']} за {sell_price} грн!\nПрибуток за угоду:"
-        f" {profit} грн.",
+        f"Ви продали {item['dev']} за {sell_price} грн!\n{profit_str}",
     )
     self.update_ui_state()
 
@@ -577,6 +594,7 @@ class PawnshopGame(ctk.CTk):
       return
 
     self.balance -= cost
+    item["spent_on_repair"] = cost
     item["is_repaired"] = True
     item["damages"] = []
     item["status"] = "ідеальний"
